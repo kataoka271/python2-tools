@@ -39,22 +39,34 @@ class MyDialog(wx.Dialog):
         if not value:
             self._txt_hex.ChangeValue("")
         else:
-            self._value = value
-            self._txt_hex.ChangeValue(self._format(binascii.b2a_hex(value)))
+            newvalue = self._p_notascii.sub("", value)
+            self._value = newvalue
+            pos = self._txt_asc.GetInsertionPoint()
+            self._txt_asc.ChangeValue(newvalue)
+            pos = pos + len(newvalue) - len(value)
+            self._txt_asc.SetInsertionPoint(pos)
+            if not newvalue:
+                self._txt_hex.ChangeValue("")
+            else:
+                self._txt_hex.ChangeValue(self._format(binascii.b2a_hex(newvalue)))
 
     def OnHexText(self, evt):
         value = self._txt_hex.GetValue()
         if not value:
             self._txt_asc.ChangeValue("")
         else:
-            newvalue = self._format(value)
+            newvalue = self._format(self._p_notascii.sub("", value))
             pos = self._txt_hex.GetInsertionPoint()
             self._txt_hex.ChangeValue(newvalue)
             pos = pos + len(newvalue) - len(value)
             self._txt_hex.SetInsertionPoint(pos)
-            ascvalue = hexdecode(newvalue)
-            self._value = ascvalue
-            self._txt_asc.ChangeValue(MyDialog._p_notascii.sub(".", ascvalue))
+            if not newvalue:
+                self._value = ""
+                self._txt_asc.ChangeValue("")
+            else:
+                ascvalue = hexdecode(newvalue)
+                self._value = ascvalue
+                self._txt_asc.ChangeValue(self._p_notascii.sub(".", ascvalue))
 
     def OnHexChar(self, evt):
         keycode = evt.GetKeyCode()
@@ -66,13 +78,13 @@ class MyDialog(wx.Dialog):
             pass
 
     def _format(self, value):
-        return MyDialog._p_hexchars.sub(r"\g<1> ", value).strip().upper()
+        return self._p_hexchars.sub(r"\g<1> ", value).strip().upper()
 
     def SetAscValue(self, value):
         self._txt_asc.SetValue(value)
 
     def SetHexValue(self, value):
-        self._txt_hex.SetValue(MyDialog._p_nothexchars.sub("", value))
+        self._txt_hex.SetValue(self._p_nothexchars.sub("", value))
 
     def SetName(self, name):
         self._cb_name.SetValue(name)
