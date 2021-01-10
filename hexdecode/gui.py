@@ -6,7 +6,7 @@ from hexdecode import hexdecode
 
 class MyDialog(wx.Dialog):
 
-    _p_notascii = re.compile(r"\W") 
+    _p_notascii = re.compile(r"[^\x20-\x7F]") 
     _p_hexchars = re.compile(r"([0-9A-Fa-f]{2}) *")
     _p_nothexchars = re.compile(r"[^0-9A-Fa-f ]+")
 
@@ -37,14 +37,15 @@ class MyDialog(wx.Dialog):
     def OnAscText(self, evt):
         value = self._txt_asc.GetValue()
         if not value:
+            self._value = ""
             self._txt_hex.ChangeValue("")
         else:
             newvalue = self._p_notascii.sub("", value)
-            self._value = newvalue
             pos = self._txt_asc.GetInsertionPoint()
             self._txt_asc.ChangeValue(newvalue)
             pos = pos + len(newvalue) - len(value)
             self._txt_asc.SetInsertionPoint(pos)
+            self._value = newvalue
             if not newvalue:
                 self._txt_hex.ChangeValue("")
             else:
@@ -53,6 +54,7 @@ class MyDialog(wx.Dialog):
     def OnHexText(self, evt):
         value = self._txt_hex.GetValue()
         if not value:
+            self._value = ""
             self._txt_asc.ChangeValue("")
         else:
             newvalue = self._format(self._p_notascii.sub("", value))
@@ -64,9 +66,9 @@ class MyDialog(wx.Dialog):
                 self._value = ""
                 self._txt_asc.ChangeValue("")
             else:
-                ascvalue = hexdecode(newvalue)
-                self._value = ascvalue
-                self._txt_asc.ChangeValue(self._p_notascii.sub(".", ascvalue))
+                rawvalue = hexdecode(newvalue)
+                self._value = rawvalue
+                self._txt_asc.ChangeValue(self._p_notascii.sub(".", rawvalue))
 
     def OnHexChar(self, evt):
         keycode = evt.GetKeyCode()
