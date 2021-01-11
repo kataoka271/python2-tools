@@ -2,11 +2,12 @@ import wx
 import binascii
 import re
 from hexdecode import hexdecode
+from diff import diffget
 
 
 class MyDialog(wx.Dialog):
 
-    _p_notascii = re.compile(r"[^\x20-\x7F]") 
+    _p_notascii = re.compile(r"[^\x20-\x7E]") 
     _p_hexchars = re.compile(r"([0-9A-Fa-f]{2}) *")
     _p_nothexchars = re.compile(r"[^0-9A-Fa-f ]+")
 
@@ -40,16 +41,9 @@ class MyDialog(wx.Dialog):
             self._value = ""
             self._txt_hex.ChangeValue("")
         else:
-            newvalue = self._p_notascii.sub("", value)
-            pos = self._txt_asc.GetInsertionPoint()
-            self._txt_asc.ChangeValue(newvalue)
-            pos = pos + len(newvalue) - len(value)
-            self._txt_asc.SetInsertionPoint(pos)
-            self._value = newvalue
-            if not newvalue:
-                self._txt_hex.ChangeValue("")
-            else:
-                self._txt_hex.ChangeValue(self._format(binascii.b2a_hex(newvalue)))
+            rawvalue = diffget(self._value, value)[1]
+            self._value = rawvalue
+            self._txt_hex.ChangeValue(self._format(binascii.b2a_hex(rawvalue)))
 
     def OnHexText(self, evt):
         value = self._txt_hex.GetValue()
