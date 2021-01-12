@@ -41,7 +41,7 @@ class MyDialog(wx.Dialog):
             self._value = ""
             self._txt_hex.ChangeValue("")
         else:
-            rawvalue = diffget(self._value, value)[1]
+            rawvalue = diffget(self._value, value.encode('cp932'))[1]
             self._value = rawvalue
             self._txt_hex.ChangeValue(self._format(binascii.b2a_hex(rawvalue)))
 
