@@ -5,6 +5,84 @@ from hexdecode import hexdecode
 from diff import diffget
 
 
+class MyFileDropTarget(wx.FileDropTarget):
+
+    def __init__(self, window, suffix):
+        wx.FileDropTarget.__init__(self)
+        self.window = window
+        self.suffix = suffix
+
+    def OnDragOver(self, x, y, defResult):
+        return wx.DragCopy
+
+    def OnDropFiles(self, x, y, filenames):
+        for filepath in filenames:
+            if filepath.endswith(self.suffix):
+                self.window.SetValue(filepath)  
+                return True
+        return False
+
+
+class ExportDialog(wx.Dialog):
+
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent, title="Export", size=(-1, 400))
+        self._txt_bin_path = wx.TextCtrl(self, size=(200, -1))
+        self._btn_bin_path = wx.Button(self, label="...", size=(20, -1))
+        self._txt_key_path = wx.TextCtrl(self, size=(200, -1))
+        self._btn_key_path = wx.Button(self, label="...", size=(20, -1))
+        self._txt_password = wx.TextCtrl(self, style=wx.TE_PASSWORD)
+        self._txt_bin_path.SetDropTarget(MyFileDropTarget(self._txt_bin_path, ".bin"))
+        self._txt_key_path.SetDropTarget(MyFileDropTarget(self._txt_key_path, ".pem"))
+        flex = wx.FlexGridSizer(3, vgap=5, hgap=5)
+        flex.AddGrowableCol(1)
+        flex.Add(wx.StaticText(self, label="Bin File (*.bin):"), 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        flex.Add(self._txt_bin_path, 0, wx.EXPAND)
+        flex.Add(self._btn_bin_path, 0, wx.EXPAND)
+        flex.Add(wx.StaticText(self, label="Key File (*.pem):"), 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        flex.Add(self._txt_key_path, 0, wx.EXPAND)
+        flex.Add(self._btn_key_path, 0, wx.EXPAND)
+        flex.Add(wx.StaticText(self, label="Password:"), 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        flex.Add(self._txt_password, 0, wx.EXPAND)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(flex, 0, wx.EXPAND | wx.ALL, 10)
+        sizer.AddStretchSpacer()
+        sizer.Add(self.CreateSeparatedButtonSizer(wx.OK | wx.CANCEL), 0, wx.EXPAND | wx.BOTTOM, 10)
+        self.SetSizer(sizer)
+        self.Fit()
+        self.CenterOnParent()
+        self._btn_bin_path.Bind(wx.EVT_BUTTON, self.OnBinFileFind)
+        self._btn_key_path.Bind(wx.EVT_BUTTON, self.OnKeyFileFind)
+
+    def OnBinFileFind(self, evt):
+        dlg = wx.FileDialog(self, "Save As", wildcard="Bin file (*.bin)|*.bin", defaultFile="package.bin", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._txt_bin_path.SetValue(dlg.GetPath())
+
+    def OnKeyFileFind(self, evt):
+        dlg = wx.FileDialog(self, "Key file", wildcard="Key file (*.pem)|*.pem", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._txt_keyfile.SetValue(dlg.GetPath())
+
+    def GetBinPath(self):
+        return self._txt_bin_path.GetValue()
+
+    def GetKeyPath(self):
+        return self._txt_key_path.GetValue()
+
+    def GetPassword(self):
+        return self._txt_password.GetValue()
+
+    def SetBinPath(self, value):
+        return self._txt_bin_path.SetValue(value)
+
+    def SetKeyPath(self, value):
+        return self._txt_key_path.SetValue(value)
+
+    def SetPassword(self, value):
+        return self._txt_password.SetValue(value)
+
+
 class MyDialog(wx.Dialog):
 
     _p_notascii = re.compile(r"[^\x20-\x7E]") 
@@ -100,6 +178,11 @@ class MyPanel(wx.Panel):
     COL_NAME = 0
     COL_ASC = 1
     COL_HEX = 2
+    MENU_EXPORT = wx.NewId()
+    MENU_EDIT_ITEM = wx.NewId()
+    MENU_COPY_NAME = wx.NewId()
+    MENU_COPY_ASC = wx.NewId()
+    MENU_COPY_HEX = wx.NewId()
 
     def __init__(self, parent):
         wx.Panel.__init__(self, parent)
@@ -110,21 +193,26 @@ class MyPanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self._lc, proportion=1, flag=wx.EXPAND)
         self.SetSizer(sizer)
-        self._populate()
-        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnActivate)
+        self._Populate()
+        self._lc.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnEditItem)
+        self._lc.Bind(wx.EVT_COMMAND_RIGHT_CLICK, self.OnRightClick)
+        self._lc.Bind(wx.EVT_MENU, self.OnExport, id=self.MENU_EXPORT)
+        self._lc.Bind(wx.EVT_MENU, self.OnEditItem, id=self.MENU_EDIT_ITEM)
+        self._lc.Bind(wx.EVT_MENU, self.OnCopyName, id=self.MENU_COPY_NAME)
+        self._lc.Bind(wx.EVT_MENU, self.OnCopyAsc, id=self.MENU_COPY_ASC)
+        self._lc.Bind(wx.EVT_MENU, self.OnCopyHex, id=self.MENU_COPY_HEX)
 
-    def OnActivate(self, evt):
-        index = evt.GetIndex()
+    def OnEditItem(self, evt):
+        index = self._lc.GetFocusedItem()
         dialog = MyDialog(self)
         dialog.SetName(self._lc.GetItemText(index, self.COL_NAME))
         dialog.SetHexValue(self._lc.GetItemText(index, self.COL_HEX))
-        ret = dialog.ShowModal()
-        if ret == wx.ID_OK:
+        if dialog.ShowModal() == wx.ID_OK:
             self._lc.SetItem(index, self.COL_NAME, dialog.GetName())
             self._lc.SetItem(index, self.COL_ASC, dialog.GetAscValue())
             self._lc.SetItem(index, self.COL_HEX, dialog.GetHexValue())
 
-    def _populate(self):
+    def _Populate(self):
         items = [
             ("key", "value", ""),
             ("read", "read", ""),
@@ -148,6 +236,40 @@ class MyPanel(wx.Panel):
             self._lc.DeleteItem(item)
             item = -1
 
+    def OnRightClick(self, evt):
+        menu = wx.Menu()
+        menu.Append(self.MENU_EXPORT, "Export")
+        menu.AppendSeparator()
+        menu.Append(self.MENU_EDIT_ITEM, "Edit Item")
+        menu.AppendSeparator()
+        menu.Append(self.MENU_COPY_NAME, "Copy Name")
+        menu.Append(self.MENU_COPY_ASC, "Copy Asc")
+        menu.Append(self.MENU_COPY_HEX, "Copy Hex")
+        self._lc.PopupMenu(menu)
+        menu.Destroy()
+
+    def OnCopyName(self, evt):
+        self._OnCopyItem(self.COL_NAME)
+
+    def OnCopyAsc(self, evt):
+        self._OnCopyItem(self.COL_ASC)
+
+    def OnCopyHex(self, evt):
+        self._OnCopyItem(self.COL_HEX)
+
+    def _OnCopyItem(self, col):
+        item = self._lc.GetFocusedItem()
+        if item < 0:
+            return
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(self._lc.GetItemText(item, col)))
+            wx.TheClipboard.Close()            
+
+    def OnExport(self, evt):
+        dialog = ExportDialog(self)
+        if dialog.ShowModal() == wx.ID_OK:
+            print (dialog.GetBinPath(), dialog.GetKeyPath(), dialog.GetPassword())
+
 
 class MyFrame(wx.Frame):
 
@@ -157,7 +279,6 @@ class MyFrame(wx.Frame):
 
     def __init__(self, parent, title, size=(-1, -1)):
         wx.Frame.__init__(self, parent, title=title, size=size)
-        # setup toolbar
         tb = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
         bmp_append = wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_TOOLBAR, self.TSIZE)
         bmp_delete = wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_TOOLBAR, self.TSIZE)
