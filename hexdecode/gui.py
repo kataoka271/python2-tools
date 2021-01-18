@@ -17,26 +17,25 @@ class ExportFileDropTarget(wx.FileDropTarget):
 
     def OnDropFiles(self, x, y, filenames):
         for filepath in filenames:
-            if filepath.endswith(self.suffix):
-                self.window.SetValue(filepath)  
-                return True
+            self.window.SetValue(filepath)  
+            return True
         return False
 
 
 class ExportDialog(wx.Dialog):
 
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, title="Export", size=(-1, 400))
-        self._txt_bin_path = wx.TextCtrl(self, size=(200, -1))
-        self._btn_bin_path = wx.Button(self, label="...", size=(20, -1))
+        wx.Dialog.__init__(self, parent, title="Save As", size=(-1, 400))
+        self._txt_pkg_path = wx.TextCtrl(self, size=(200, -1))
+        self._btn_pkg_path = wx.Button(self, label="...", size=(20, -1))
         self._txt_key_path = wx.TextCtrl(self, size=(200, -1))
         self._btn_key_path = wx.Button(self, label="...", size=(20, -1))
         self._txt_password = wx.TextCtrl(self, style=wx.TE_PASSWORD)
         self._txt_key_path.SetDropTarget(ExportFileDropTarget(self._txt_key_path))
         gbs = wx.GridBagSizer(vgap=5, hgap=5)
-        gbs.Add(wx.StaticText(self, label="Bin File (*.bin):"), (0, 0), flag=wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
-        gbs.Add(self._txt_bin_path, (0, 1), flag=wx.EXPAND)
-        gbs.Add(self._btn_bin_path, (0, 2), flag=wx.EXPAND)
+        gbs.Add(wx.StaticText(self, label="Package File (*.bin):"), (0, 0), flag=wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        gbs.Add(self._txt_pkg_path, (0, 1), flag=wx.EXPAND)
+        gbs.Add(self._btn_pkg_path, (0, 2), flag=wx.EXPAND)
         gbs.Add(wx.StaticLine(self), (1, 0), (1, 3), flag=wx.EXPAND)
         gbs.Add(wx.StaticText(self, label="Key File (*.pem):"), (2, 0), flag=wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         gbs.Add(self._txt_key_path, (2, 1), flag=wx.EXPAND)
@@ -51,21 +50,21 @@ class ExportDialog(wx.Dialog):
         self.SetSizer(sizer)
         self.Fit()
         self.CenterOnParent()
-        self._btn_bin_path.Bind(wx.EVT_BUTTON, self.OnBinFileFind)
+        self._btn_pkg_path.Bind(wx.EVT_BUTTON, self.OnPkgFileFind)
         self._btn_key_path.Bind(wx.EVT_BUTTON, self.OnKeyFileFind)
 
-    def OnBinFileFind(self, evt):
-        dlg = wx.FileDialog(self, "Save As", wildcard="Bin file (*.bin)|*.bin", defaultFile="package.bin", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+    def OnPkgFileFind(self, evt):
+        dlg = wx.FileDialog(self, "Save As", wildcard="Package File (*.bin)|*.bin", defaultFile="package.bin", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
-            self._txt_bin_path.SetValue(dlg.GetPath())
+            self._txt_pkg_path.SetValue(dlg.GetPath())
 
     def OnKeyFileFind(self, evt):
-        dlg = wx.FileDialog(self, "Key file", wildcard="Key file (*.pem)|*.pem", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        dlg = wx.FileDialog(self, "Key File", wildcard="Key File (*.pem)|*.pem", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
-            self._txt_keyfile.SetValue(dlg.GetPath())
+            self._txt_key_path.SetValue(dlg.GetPath())
 
     def GetBinPath(self):
-        return self._txt_bin_path.GetValue()
+        return self._txt_pkg_path.GetValue()
 
     def GetKeyPath(self):
         return self._txt_key_path.GetValue()
@@ -74,7 +73,7 @@ class ExportDialog(wx.Dialog):
         return self._txt_password.GetValue()
 
     def SetBinPath(self, value):
-        return self._txt_bin_path.SetValue(value)
+        return self._txt_pkg_path.SetValue(value)
 
     def SetKeyPath(self, value):
         return self._txt_key_path.SetValue(value)
@@ -286,7 +285,6 @@ class MyPanel(wx.Panel):
     def OnExport(self, evt):
         dialog = ExportDialog(self)
         if dialog.ShowModal() == wx.ID_OK:
-            print (dialog.GetBinPath(), dialog.GetKeyPath(), dialog.GetPassword())
             ls = []
             item = 0
             while item < self._lc.GetItemCount():
