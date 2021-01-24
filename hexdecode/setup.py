@@ -4,8 +4,8 @@ import os
 import py2exe
 import shutil
 
-shutil.rmtree("build", ignore_errors=True)
-shutil.rmtree("dist", ignore_errors=True)
+#shutil.rmtree("build", ignore_errors=True)
+#shutil.rmtree("dist", ignore_errors=True)
 
 py2exe_options = {
     "compressed": 2,
@@ -66,6 +66,6 @@ py2exe_options = {
     ]
 }
 
-setup(options={ "py2exe": py2exe_options },
+setup(options={"py2exe": py2exe_options},
       zipfile=None,
       windows=[{"script": "gui.py"}])
