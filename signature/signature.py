@@ -29,6 +29,7 @@ def generate_keypair(password=None):
     )
     return (key, pub)
 
+
 def sign(payload, key, password=None):
     private_key = serialization.load_pem_private_key(
         data=key,
@@ -44,6 +45,7 @@ def sign(payload, key, password=None):
         hashes.SHA256(),
     )
     return signature
+
 
 def verify(payload, signature, pub):
     public_key = load_pem_public_key(pub, default_backend())
@@ -71,14 +73,16 @@ def _generate_keypair():
     with open('public.pem', 'wb') as f:
         f.write(pub)
 
+
 def _sign():
-    with open('private.key', 'rb') as f: 
+    with open('private.key', 'rb') as f:
         key = f.read()
     with open('payload.dat', 'rb') as f:
         payload = f.read()
     signature = sign(payload, key, password="ABC")
     with open('signature.sig', 'wb') as f:
         f.write(base64.b64encode(signature))
+
 
 def _verify():
     with open('public.pem', 'rb') as f:
