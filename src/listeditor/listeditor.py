@@ -261,11 +261,6 @@ def main():
     app = wx.App()
     frame = AppFrame(None, title="Test Frame")
     frame.SetSize((800, 600))
-    frame.list.Populate([
-        ("key", "value", ""),
-        ("read", "read", ""),
-        ("one", "1", "")
-    ])
     frame.Show()
     app.MainLoop()
 
