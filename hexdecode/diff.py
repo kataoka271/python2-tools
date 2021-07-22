@@ -17,21 +17,21 @@ def diffget(raw, asc):
                 i = 0
             elif k == -d:
                 w = u[offset + k + 1]
-                i = v[offset + k + 1] + 1 # delete
+                i = v[offset + k + 1] + 1  # delete
             elif k == d:
                 w = u[offset + k - 1]
-                i = v[offset + k - 1] # insert
+                i = v[offset + k - 1]  # insert
                 w = w + asc[i + k - 1]
             else:
                 if v[offset + k + 1] + 1 >= v[offset + k - 1]:
                     w = u[offset + k + 1]
-                    i = v[offset + k + 1] + 1 # delete
+                    i = v[offset + k + 1] + 1  # delete
                 else:
                     w = u[offset + k - 1]
-                    i = v[offset + k - 1] # insert
+                    i = v[offset + k - 1]  # insert
                     w = w + asc[i + k - 1]
-                #i = max(v[offset + k + 1] + 1, v[offset + k - 1])
-            while i < m and i + k < n and compare(raw[i], asc[i + k]): # raw[i] == asc[i + k]:
+                # i = max(v[offset + k + 1] + 1, v[offset + k - 1])
+            while i < m and i + k < n and compare(raw[i], asc[i + k]):  # raw[i] == asc[i + k]:
                 w = w + raw[i]
                 i += 1
             if k == n - m and i == m:
