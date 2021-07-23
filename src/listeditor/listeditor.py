@@ -1,21 +1,24 @@
 import wx
-import json
 from hexeditor import hexeditor
 
 
-class ExportFileDropTarget(wx.FileDropTarget):
+class FileDropTarget(wx.FileDropTarget):
 
-    def __init__(self, window):
+    def __init__(self, windowOrFunc):
         wx.FileDropTarget.__init__(self)
-        self.window = window
+        self.windowOrFunc = windowOrFunc
 
     def OnDragOver(self, x, y, defResult):
         return wx.DragCopy
 
     def OnDropFiles(self, x, y, filenames):
         for filepath in filenames:
-            self.window.SetValue(filepath)
-            return True
+            if hasattr(self.windowOrFunc, "SetValue"):
+                self.windowOrFunc.SetValue(filepath)
+                return True
+            else:
+                if self.windowOrFunc(filepath):
+                    return True
         return False
 
 
@@ -28,7 +31,8 @@ class ExportDialog(wx.Dialog):
         self._pemPath = wx.TextCtrl(self, size=(200, -1))
         button2 = wx.Button(self, label="...", size=(20, -1))
         self._pemPass = wx.TextCtrl(self, style=wx.TE_PASSWORD)
-        self._pemPath.SetDropTarget(ExportFileDropTarget(self._pemPath))
+        self._binPath.SetDropTarget(FileDropTarget(self._binPath))
+        self._pemPath.SetDropTarget(FileDropTarget(self._pemPath))
         gbs = wx.GridBagSizer(vgap=5, hgap=5)
         gbs.Add(wx.StaticText(self, label="Package File (*.bin):"), (0, 0), flag=wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
         gbs.Add(self._binPath, (0, 1), flag=wx.EXPAND)
@@ -120,12 +124,15 @@ class ListPanel(wx.Panel):
     MENU_COPY_ASC = wx.NewId()
     MENU_COPY_HEX = wx.NewId()
 
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent)
+    def __init__(self, parent, *args, **kwargs):
+        wx.Panel.__init__(self, parent, *args, **kwargs)
         self._list = wx.ListCtrl(self, style=wx.LC_REPORT | wx.NO_BORDER)
-        self._list.SetColumnWidth(self._list.AppendColumn("Name"), 100)
-        self._list.SetColumnWidth(self._list.AppendColumn("ASC"), 100)
-        self._list.SetColumnWidth(self._list.AppendColumn("HEX"), 100)
+        col = self._list.AppendColumn("Name")
+        self._list.SetColumnWidth(col, 250)
+        col = self._list.AppendColumn("ASC")
+        self._list.SetColumnWidth(col, 250)
+        col = self._list.AppendColumn("HEX")
+        self._list.SetColumnWidth(col, 250)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self._list, proportion=1, flag=wx.EXPAND)
         self.SetSizer(sizer)
@@ -136,6 +143,10 @@ class ListPanel(wx.Panel):
         self._list.Bind(wx.EVT_MENU, self.OnCopyName, id=self.MENU_COPY_NAME)
         self._list.Bind(wx.EVT_MENU, self.OnCopyAsc, id=self.MENU_COPY_ASC)
         self._list.Bind(wx.EVT_MENU, self.OnCopyHex, id=self.MENU_COPY_HEX)
+        self._list.SetDropTarget(FileDropTarget(self.OnDropFile))
+
+    def OnDropFile(self, filepath):
+        print("OnDropFile filepath={}".format(filepath.encode('cp932')))
 
     def OnEditItem(self, evt):
         item = self._list.GetFirstSelected()
@@ -215,7 +226,7 @@ class ListPanel(wx.Panel):
             wx.TheClipboard.SetData(wx.TextDataObject(self._list.GetItemText(item, col)))
             wx.TheClipboard.Close()
 
-    def OnExport(self, evt):
+    def OnExport(self, evt=None):
         dlg = ExportDialog(self)
         if dlg.ShowModal() != wx.ID_OK:
             return
@@ -226,8 +237,8 @@ class ListPanel(wx.Panel):
                           self._list.GetItemText(item, self.COL_ASC),
                           self._list.GetItemText(item, self.COL_HEX)))
             item += 1
-        with open(dlg.GetBinPath(), "w") as fp:
-            json.dump(items, fp)
+        print("Export BinPath={} PEMPath={} Password={}".format(dlg.GetBinPath(), dlg.GetPemPath(), dlg.GetPemPass()).encode('cp932'))
+        print(items)
 
 
 class AppFrame(wx.Frame):
@@ -235,19 +246,23 @@ class AppFrame(wx.Frame):
     ICON_SIZE = (16, 16)
     ID_APPEND = 10
     ID_DELETE = 20
+    ID_EXPORT = 30
 
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title)
         bmAppend = wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_TOOLBAR, self.ICON_SIZE)
         bmDelete = wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_TOOLBAR, self.ICON_SIZE)
+        bmExport = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_TOOLBAR, self.ICON_SIZE)
         toolbar = self.CreateToolBar(wx.TB_HORIZONTAL | wx.NO_BORDER | wx.TB_FLAT)
         toolbar.SetToolBitmapSize(self.ICON_SIZE)
         toolbar.AddTool(self.ID_APPEND, "Append", bmAppend)
         toolbar.AddTool(self.ID_DELETE, "Delete", bmDelete)
+        toolbar.AddTool(self.ID_EXPORT, "Export", bmExport)
         toolbar.Realize()
         self.Bind(wx.EVT_TOOL, self.OnToolClick, id=self.ID_APPEND)
         self.Bind(wx.EVT_TOOL, self.OnToolClick, id=self.ID_DELETE)
-        self.list = ListPanel(self)
+        self.Bind(wx.EVT_TOOL, self.OnToolClick, id=self.ID_EXPORT)
+        self.list = ListPanel(self, style=wx.BORDER_THEME)
 
     def OnToolClick(self, evt):
         eventId = evt.GetId()
@@ -255,6 +270,10 @@ class AppFrame(wx.Frame):
             self.list.AppendItem()
         elif eventId == self.ID_DELETE:
             self.list.DeleteItem()
+        elif eventId == self.ID_EXPORT:
+            self.list.OnExport()
+        else:
+            print("OnToolClick event id=0x{:x}", eventId)
 
 
 def main():
