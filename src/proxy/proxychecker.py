@@ -11,9 +11,9 @@ def measure(url, proxy_address):
         opener = urllib2.build_opener(proxy_handler)
         urllib2.install_opener(opener)
     req = urllib2.Request(url)
-    #req.add_header("Accept", "image/*")
-    #req.add_header("Referer", "https://i.imgur.com/")
-    #req.add_header("User-agent", 'Mozilla/5.0')
+    # req.add_header("Accept", "image/*")
+    # req.add_header("Referer", "https://i.imgur.com/")
+    # req.add_header("User-agent", 'Mozilla/5.0')
     t = time.time()
     try:
         f = urllib2.urlopen(req)
@@ -22,13 +22,13 @@ def measure(url, proxy_address):
     else:
         dt = time.time() - t
         print f.info()
-        print dt
+        print "response: {}".format(dt)
         t = time.time()
         n = len(f.read())
-        print n
         dt = time.time() - t
-        print dt
-        print n / dt * 8 / 1000.0, "kbps"
+        print "complete: {}".format(dt)
+        print "read bytes: {}".format(n)
+        print "speed: {} kbps".format(n / dt * 8 / 1000.0)
 
 
 def main():
