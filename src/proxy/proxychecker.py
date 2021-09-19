@@ -3,7 +3,7 @@ import time
 import sys
 
 
-def measure(url, proxy_address):
+def measure(url, proxy_address, headers=True):
     if proxy_address:
         proxy = {'http': 'http://{0}'.format(proxy_address),
                  'https': 'https://{0}'.format(proxy_address)}
@@ -21,7 +21,8 @@ def measure(url, proxy_address):
         print e
     else:
         dt = time.time() - t
-        print f.info()
+        if headers:
+            print f.info()
         print "response: {}".format(dt)
         t = time.time()
         n = len(f.read())
@@ -31,16 +32,38 @@ def measure(url, proxy_address):
         print "speed: {} kbps".format(n / dt * 8 / 1000.0)
 
 
+def options(args):
+    proxy_address = None
+    url = None
+    opts = {"interactive": False, "headers": True}
+    for a in args:
+        if a == "-i":
+            opts["interactive"] = True
+        elif a == "-H":
+            opts["headers"] = False
+        elif url is None:
+            url = a
+        else:
+            proxy_address = a
+    return (url, proxy_address, opts)
+
+
+def interact(url, *args):
+    try:
+        while True:
+            measure(url, raw_input("proxy>> ").strip(), *args)
+    except EOFError:
+        pass
+
+
 def main():
-    proxy_address = ""
-    url = ""
-    if len(sys.argv) > 2:
-        proxy_address = sys.argv[2]
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
+    (url, proxy_address, opts) = options(sys.argv[1:])
+    if url is None:
+        print "proxychecker.py [-i] URL [proxy_address]"
+    elif opts["interactive"]:
+        interact(url, opts["headers"])
     else:
-        print "proxychecker.py URL [proxy_address]"
-    measure(url, proxy_address)
+        measure(url, proxy_address, opts["headers"])
 
 
 if __name__ == '__main__':
